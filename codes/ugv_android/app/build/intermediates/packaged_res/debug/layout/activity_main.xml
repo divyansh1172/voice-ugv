@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="#F0F3F4">
+
+    <!-- Header & Status -->
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="UGV COMMAND CENTER"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:textColor="#2C3E50"/>
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scanning for UGV..."
+            android:textSize="14sp"
+            android:layout_marginTop="4dp"
+            android:textColor="#7F8C8D"/>
+    </LinearLayout>
+
+    <!-- Main Voice Button (Center) -->
+    <Button
+        android:id="@+id/speakButton"
+        android:layout_width="160dp"
+        android:layout_height="160dp"
+        android:layout_centerInParent="true"
+        android:background="@android:drawable/btn_default"
+        android:backgroundTint="#2980B9"
+        android:text="Hold to\nSpeak"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:enabled="false"
+        android:elevation="8dp"/>
+
+    <!-- Joystick-style Directional Buttons around Speak Button -->
+    <Button
+        android:id="@+id/btnForward"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_above="@id/speakButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="12dp"
+        android:backgroundTint="#BDC3C7"
+        android:text="▲"
+        android:textColor="#2C3E50"/>
+
+    <Button
+        android:id="@+id/btnBack"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_below="@id/speakButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="#BDC3C7"
+        android:text="▼"
+        android:textColor="#2C3E50"/>
+
+    <Button
+        android:id="@+id/btnLeft"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_toLeftOf="@id/speakButton"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="12dp"
+        android:backgroundTint="#BDC3C7"
+        android:text="◀"
+        android:textColor="#2C3E50"/>
+
+    <Button
+        android:id="@+id/btnRight"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_toRightOf="@id/speakButton"
+        android:layout_centerVertical="true"
+        android:layout_marginLeft="12dp"
+        android:backgroundTint="#BDC3C7"
+        android:text="▶"
+        android:textColor="#2C3E50"/>
+
+    <!-- Bottom Controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp">
+
+        <!-- Safety STOP Button -->
+        <Button
+            android:id="@+id/stopButton"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:backgroundTint="#C0392B"
+            android:text="EMERGENCY STOP"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
+            android:id="@+id/debugButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Settings / Training"
+            android:backgroundTint="#7F8C8D"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"/>
+    </LinearLayout>
+
+</RelativeLayout>

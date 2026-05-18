@@ -1,0 +1,846 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{float}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{gensymb}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+
+\lstset{
+	basicstyle=\ttfamily\footnotesize,
+	breaklines=true,
+	frame=single,
+	backgroundcolor=\color{gray!10},
+	keywordstyle=\color{blue},
+	commentstyle=\color{green!50!black},
+	stringstyle=\color{red},
+}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+		T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\raggedbottom
+\setlength{\parskip}{0pt}
+\setlength{\parsep}{0pt}
+\begin{document}
+	
+	\title{A Mobile Phone based Voice-Controlled UGV
+		%\\
+		%Using MFCC and DTW
+	}
+	
+	\author{
+		\IEEEauthorblockN{Divyansh Maheshwari, Shriyansh Chawda and GVV Sharma}
+		\IEEEauthorblockA{
+			Department of Electrical Engineering\\
+			Indian Institute of Technology, Hyderabad\\
+			Kandi, India 502284\\
+			gadepall@ee.iith.ac.in
+		}
+	}
+	
+	\maketitle
+	
+	\begin{abstract}
+		This paper implements a cloud-free voice-controlled Unmanned Ground
+		Vehicle (UGV), consisting of a simple speech recognition engine and microcontroller based mobility.
+		The novelty of this work lies in the fact that
+		all 
+		voice commands are processed 
+		on an Android
+		smartphone 
+		where  all speech recognition algorithms are implemented.
+		The key algorithms used are Mel-Frequency Cepstral Coefficient (MFCC) features
+		combined with Dynamic Time Warping (DTW).
+		User adaptation is supported through up to ten recorded templates
+		per command, achieving 90--95\% accuracy across 10 speakers and demonstrating
+		language-agnostic operation in English, Hindi, Gujarati, and Tamil.
+		
+		%that performs  The phone records 1.5\,s of audio, extracts
+		%26-dimensional Mel-Frequency Cepstral Coefficient (MFCC) features,
+		%and applies Dynamic Time Warping (DTW) with Best-of-$N$ template
+		%matching (up to $N=10$ templates per command) to identify one of five commands: \textit{forward},
+		%\textit{back}, \textit{left}, \textit{right}, and \textit{stop}.
+		%The recognized command is sent as a 7-byte string over Bluetooth
+		%Low Energy (BLE) to an ESP32, which drives a differential-drive
+		%chassis via an L293D motor driver. Moving recognition off the ESP32
+		%reduces latency from 2--4\,s to 1.6\,s and frees 80\,kB of flash.
+	\end{abstract}
+	
+	\begin{IEEEkeywords}
+		UGV, voice control, MFCC, DTW, ESP32, BLE, Android, speech recognition
+		% embedded systems
+	\end{IEEEkeywords}
+	
+	\section{Introduction} \label{sec:intro}
+	
+	Speech-based control removes the need for physical controllers
+	and lowers the barrier for non-expert operation of ground robots.
+	Most prior implementations use recognition to cloud automatic speech recognition (ASR)
+	services~\cite{li2017speech}, which introduces round-trip
+	latency and ties the system to network availability. Running
+	a full speech model on the robot microcontroller directly is
+	equally impractical: a device such as the ESP32 carries
+	insufficient flash and RAM for any modern recogniser.
+	
+	This paper resolves the compute--connectivity dilemma by
+	offloading all recognition to the Android smartphone that
+	the operator already carries. Short utterances are converted
+	to MFCC feature matrices~\cite{davis1980mfcc} and matched
+	against stored templates using DTW~\cite{sakoe1978dtw}.
+	Both steps run entirely on the phone, so no audio ever leaves
+	the device. Neural keyword-spotting alternatives exist for
+	microcontrollers~\cite{zhang2017hello, choi2019iot} but demand
+	labelled training corpora and quantisation pipelines that a
+	DTW system avoids entirely. A 7-byte bluetooth low energy (BLE) command string is
+	transmitted to the ESP32 only after a match is confirmed,
+	reducing the wireless payload by over 99\% compared to
+	streaming raw audio~\cite{mikhaylov2013ble}.
+	\subsection{Key Contributons}
+	The specific contributions of this work are
+	\begin{enumerate}
+		\item A smartphone-resident MFCC+DTW pipeline that operates
+		without any cloud or internet dependency.
+		\item A Best-of-$N$ template strategy allowing each user to
+		enrol up to ten personal utterances per command for
+		speaker adaptation.
+		\iffalse
+		\item A latency-optimised BLE scheme that cuts end-to-end
+		response time from 2--4\,s to approximately 1.6\,s by
+		transmitting only the recognised command label.
+	\fi
+	\end{enumerate}
+	\section{System Architecture} \label{sec:architecture}
+	
+	\subsection{Hardware Setup} \label{sec:hardware}
+	
+	Table \ref{tab:components}
+	lists the various hardware components for UGV control.
+	Fig. \ref{fig:wiring} shows the connections between the ESP32 and the UGV motor driver.
+	Table \ref{tab:truth} shows how the motor driver controls UGV mobility. 
+	\input{tables/table_components.tex}
+	
+	\iffalse
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\columnwidth]{figs/ugv_hardware.jpeg} 
+		\caption{Top-down view of the assembled UGV prototype, detailing the ESP32, breadboard, L293D motor driver, and chassis wiring.}
+		\label{fig:hardware_setup}
+	\end{figure}
+	\fi
+	
+	%\subsection{Motor Wiring}
+	%Four GPIO pins on the ESP32 drive the L293D input lines directly
+	%using digital writes — no PWM is involved. EN1 and EN2 are tied
+	%permanently HIGH so both motor channels remain enabled at all times.
+	%\input{tables/table_wiring.tex}
+	
+	%\subsection{Full Schematic}
+	\begin{figure}[H]
+		\centering
+		\resizebox{\columnwidth}{!}{
+			\begin{tikzpicture}[
+				node distance=0cm,
+				block/.style={rectangle, draw, rounded corners=3pt,
+					minimum width=2.2cm, font=\footnotesize,
+					text centered, line width=0.5pt},
+				pin/.style={font=\scriptsize},
+				arrA/.style={-{Stealth[length=3.5pt]}, thick, draw=gray!60},
+				arrB/.style={-{Stealth[length=3.5pt]}, thick, draw=gray!30},
+				pwr/.style={-{Stealth[length=3.5pt]}, thick, draw=black, dashed},
+				gnd/.style={-{Stealth[length=3.5pt]}, thick, draw=black!50},
+				]
+				\node[block, fill=blue!6, draw=blue!40,
+				minimum width=2.4cm, minimum height=4.6cm]
+				(esp) at (0,0) {};
+				\node[font=\footnotesize\bfseries] at (0, 2.0) {ESP32};
+				
+				\foreach \lbl/\y in {
+					GPIO 32/1.3, GPIO 33/0.8,
+					GPIO 25/0.1, GPIO 26/-0.4,
+					3.3\,V/-1.0, GND/-1.4}{
+					\node[pin, anchor=east] at (1.2, \y) {\lbl};
+				}
+				
+				\node[block, fill=orange!8, draw=orange!50,
+				minimum width=2.6cm, minimum height=4.8cm]
+				(ic) at (4.0,0) {};
+				\node[font=\footnotesize\bfseries] at (4.0, 2.1) {L293D};
+				
+				\foreach \lbl/\y in {
+					IN1/1.3, IN2/0.8, IN3/0.1, IN4/-0.4,
+					EN1/-0.9, EN2/-1.2, GND/-1.5}{
+					\node[pin, anchor=west] at (2.7, \y) {\lbl};
+				}
+				
+				\foreach \lbl/\y in {OUT1/1.3, OUT2/0.8, OUT3/0.1, OUT4/-0.4}{
+					\node[pin, anchor=east] at (5.3, \y) {\lbl};
+				}
+				\node[pin] at (4.0,-1.9) {VCC2};
+				
+				\draw[gray!40, thin] (2.72, 0.44) -- (5.28, 0.44);
+				
+				\node[block, fill=purple!6, draw=purple!40,
+				minimum width=2.0cm, minimum height=1.2cm]
+				(ma) at (7.8, 1.05) {Motor A};
+				
+				\node[block, fill=teal!6, draw=teal!40,
+				minimum width=2.0cm, minimum height=1.2cm]
+				(mb) at (7.8,-0.25) {Motor B};
+				
+				\node[block, fill=green!6, draw=green!40,
+				minimum width=2.6cm, minimum height=0.55cm]
+				(pwr) at (4.0,-2.8) {Power bank / LiPo};
+				
+				\draw[arrA] (1.2, 1.3) -- (2.7, 1.3);
+				\draw[arrA] (1.2, 0.8) -- (2.7, 0.8);
+				\draw[arrB] (1.2, 0.1) -- (2.7, 0.1);
+				\draw[arrB] (1.2,-0.4) -- (2.7,-0.4);
+				\draw[pwr] (1.2,-1.0) -- (2.7,-1.0);
+				\draw[gnd] (1.2,-1.4) -- (2.7,-1.4);
+				
+				\draw[pwr] (4.0,-2.52) -- (4.0,-2.06);
+				
+				\draw[arrA] (5.3, 1.3) -| (6.3, 1.35) -- (6.8, 1.35);
+				\draw[arrA] (5.3, 0.8) -| (6.5, 0.75) -- (6.8, 0.75);
+				
+				\draw[arrB] (5.3, 0.1) -| (6.4,-0.15) -- (6.8,-0.15);
+				\draw[arrB] (5.3,-0.4) -| (6.3,-0.35) -- (6.8,-0.35);
+				
+			\end{tikzpicture}
+		}
+		\caption{Wiring schematic: ESP32 to L293D to DC motors.
+			%  Dark arrows — Motor A channel (GPIO\,32/33 $\to$ IN1/IN2 $\to$ OUT1/OUT2).
+			%  Light arrows — Motor B channel (GPIO\,25/26 $\to$ IN3/IN4 $\to$ OUT3/OUT4).
+			%  Dashed — power connections (3.3\,V to EN1, EN2; motor supply to VCC2).
+		}
+		\label{fig:wiring}
+	\end{figure}
+	
+	%\subsection{Motor Truth Table}
+	
+	\input{tables/table_truth.tex}
+	
+	\subsection{Software Overview}
+	Two hardware nodes form the complete system: an Android smartphone
+	that handles all audio capture and recognition, and an ESP32
+	microcontroller that handles BLE reception and motor actuation.
+	Fig. \ref{fig:blockdiagram} shows the key functions executed by the smartphone and the ESP32.
+	\iffalse
+	An earlier design ran MFCC extraction and DTW matching on the ESP32
+	itself. That approach consumed $\sim$80\,kB of flash, streamed
+	24{,}000 bytes of raw audio over BLE per utterance, and produced
+	2--4\,s of end-to-end latency. Moving recognition to the phone
+	shrinks the BLE payload to a 7-byte ASCII command string and cuts
+	latency to $\sim$1.6\,s. The ESP32 is left with only two tasks:
+	receive the string and drive the motors.
+	
+	\input{tables/table_arch.tex}
+	\fi
+	
+	
+	\begin{figure}[H]
+		\centering
+		\begin{tikzpicture}[
+			node distance=0.45cm,
+			block/.style={rectangle, draw, rounded corners=4pt,
+				minimum width=3.2cm, minimum height=0.65cm,
+				text centered, font=\small, fill=blue!8, draw=blue!40,
+				line width=0.6pt},
+			arrow/.style={-{Stealth[length=4pt]}, thick, draw=gray!70}
+			]
+			
+			\node (audio)  [block]                  {Audio Capture (8\,kHz mono)};
+			\node (mfcc)   [block, below=of audio]  {MFCC Extraction ($92{\times}26$)};
+			\node (dtw)    [block, below=of mfcc]   {DTW Matching --- Best-of-N};
+			\node (thresh) [block, below=of dtw]    {Threshold Check ($\tau = 12.0$)};
+			\node (ble)    [block, below=of thresh] {BLE Transmit (7-byte string)};
+			\node (esp)    [block, below=of ble]    {ESP32 Receiver};
+			\node (motor)  [block, below=of esp]    {L293D Motor Driver};
+			\node (ugv)    [block, below=of motor]  {UGV Motors};
+			
+			\draw[arrow] (audio)  -- (mfcc);
+			\draw[arrow] (mfcc)   -- (dtw);
+			\draw[arrow] (dtw)    -- (thresh);
+			\draw[arrow] (thresh) -- (ble);
+			\draw[arrow] (ble)    -- (esp)
+			node[midway, right=6pt, font=\footnotesize, text=gray] {BLE};
+			\draw[arrow] (esp)    -- (motor);
+			\draw[arrow] (motor)  -- (ugv);
+			
+			\draw[thick, gray!60]
+			([xshift=52pt]audio.north east) -- ([xshift=52pt]ble.south east);
+			\draw[thick, gray!60]
+			([xshift=52pt]audio.north east) -- ([xshift=46pt]audio.north east);
+			\draw[thick, gray!60]
+			([xshift=52pt]ble.south east)   -- ([xshift=46pt]ble.south east);
+			\node[font=\small\bfseries, rotate=90, anchor=center, text=gray!80]
+			at ([xshift=66pt]$(audio.north east)!0.5!(ble.south east)$)
+			{Android Phone};
+			
+			\draw[thick, gray!60]
+			([xshift=52pt]esp.north east) -- ([xshift=52pt]ugv.south east);
+			\draw[thick, gray!60]
+			([xshift=52pt]esp.north east) -- ([xshift=46pt]esp.north east);
+			\draw[thick, gray!60]
+			([xshift=52pt]ugv.south east) -- ([xshift=46pt]ugv.south east);
+			\node[font=\small\bfseries, rotate=90, anchor=center, text=gray!80]
+			at ([xshift=66pt]$(esp.north east)!0.5!(ugv.south east)$)
+			{ESP32};
+			
+		\end{tikzpicture}
+		\caption{System pipeline block diagram.}
+		\label{fig:blockdiagram}
+	\end{figure}
+	
+	\section{Signal Processing} \label{sec:mfcc}
+An android app was built using Claude for the following
+\begin{enumerate}
+	\item Recording the 5 templates in Table \ref{tab:truth}, 10 samples being recorded for each command. 1.5\,s audio was captured at 8\,kHz which was converted into a compact
+$92 \times 26$ feature matrix using Mel-Frequency Cepstral Coefficients (MFCC).
+	\item For voice recognition, 
+the MFCC feature matrix of a spoken query is compared against stored
+command templates using Dynamic Time Warping (DTW)~\cite{sakoe1978dtw}.
+	\item Transmitting the voice commands to the ESP 32 for vehicle control
+\end{enumerate}
+	The android app details are available in Appendix 
+\ref{app:android}.
+\iffalse
+The app was programmed to record The pipeline frames the signal into 92 overlapping windows, applies a Hamming
+window and FFT to extract spectral energy, maps it onto a 26-band Mel filterbank
+that mimics human auditory perception, and decorrelates the result via DCT-II
+into 13 cepstral coefficients. First-order delta coefficients are appended to
+capture temporal dynamics, expanding each frame to 26 dimensions. Finally,
+Cepstral Mean and Variance Normalisation (CMVN)~\cite{furui1981cmvn} removes
+speaker-specific biases by standardising each coefficient across all 92 frames,
+making the features robust across different voices and microphones.  All the above is well known in the literature and implemented in the andriod app by Claude.
+\section{Pattern Matching} \label{sec:dtw}
+
+DTW computes a frame-by-frame Euclidean distance and finds the optimal
+alignment path between the query and each template, allowing for natural
+variations in speaking speed. The accumulated path cost is normalised by
+the path length to remove duration bias. A Best-of-$N$ strategy then
+takes the minimum score across all stored templates (up to $N=10$ per
+command), so the system always matches against the user's closest recorded
+utterance. A command is accepted only if its winning score falls below
+threshold $\tau = 12.0$; otherwise the input is rejected as noise or an
+unknown word.
+	
+%	\section{User Adaptation and Tuning} \label{sec:tuning}
+	
+	\subsection{Recording Additional Templates}
+	
+	The \texttt{TemplateStore} always holds template index~0, which ships
+	pre-built inside \texttt{assets} and was recorded by the original
+	developer. Slots 1--9 are filled on the target device through
+	\texttt{DebugActivity}'s record button; no PC or cable is needed after
+	the initial APK install. 
+	How many slots to fill depends on the use
+	case --- 
+\fi
+	Table~\ref{tab:samples} gives concrete guidance on the number of samples to be recorded in various scenarios.
+		Fig. \ref{fig:debug} 
+		provides the interface available in the android app for recording voice samples and recognizing them.
+	\begin{figure}[t]
+		\centering
+		\includegraphics[width=0.62\columnwidth]{figs/debug.png}
+		\caption{Debug Activity screen showing live DTW scores after speaking
+			\textit{forward}. The blue bar indicates the winning command (score
+			4.36), while all other commands score above 5.0. All five commands
+			have 10 recorded templates (10/10), producing well-separated scores
+			and reliable recognition.}
+		\label{fig:debug}
+	\end{figure}
+	
+	% NOTE: In tables/table_samples.tex, the row "Multiple speakers — Not supported"
+	% must be corrected to read "Shared templates across speakers — Not supported"
+	% to avoid contradicting the multi-speaker evaluation results in Section VIII.
+	\input{tables/table_samples.tex}
+	
+	\subsection{Threshold Tuning}
+	
+	Picking a good threshold 
+%	$\tau$ 
+	is straightforward with the live score display
+	in the debug screen of the android app. We run several genuine utterances and note the
+	highest DTW score that still matches the correct command; then run
+	a few wrong commands and note the lowest score that correctly rejects
+	them. We then set the threshold anywhere in the gap between those two numbers. In
+	practice, 8--10 personal templates recorded in a quiet room push the
+	correct-command scores down to the 3.0--7.5 range (Table~\ref{tab:results}),
+	so a threshold of 8.0--10.0 gives comfortable separation for a single
+	speaker.
+	
+	\section{Vehicle Control}
+	\subsection{ESP32 Firmware Operation}
+
+The ESP32 firmware performs the following sequence of actions:
+
+\begin{enumerate}
+    \item Initializes a Bluetooth Low Energy (BLE) server to enable wireless communication with an external controller. Advertises itself and waits for a device to connect. Once connected, listens for incoming command messages sent over BLE.
+
+    \item Interprets valid commands to control the UGV's motion:
+		Moves forward or backward continuously until a stop command is received. Executes left or right turns for a fixed duration, resulting in an approximate 90\degree \ rotation. Stops all motion immediately when instructed.
+    
+    \item Drives the motor controller by setting appropriate GPIO pins to control wheel movement. Sends acknowledgment notifications back to the connected device after processing commands.
+	\item Lateral movement is timed rather than angle-sensed: approximately 600\, ms worked for the test vehicle.
+\end{enumerate}
+
+Details of the firmware implementation are provided in Appendix
+%~\ref{app:esp_imple_detail}.
+\ref{app:esp32}.
+% 	\subsection{ESP32 Firmware2}
+	
+% 	Three source files make up the firmware, built with PlatformIO
+% 	on the Arduino framework.
+	
+% 	\textbf{ble\_receive.cpp} sets up a BLE GATT server with a WRITE
+% 	characteristic (\texttt{UUID:~...9002}) for incoming command strings
+% 	and a NOTIFY characteristic (\texttt{UUID:~...9003}) for
+% 	acknowledgements. Any string not matching the five known commands
+% 	is discarded. Advertising for new connection restarts automatically on disconnect.
+	
+% 	\textbf{motor.cpp} toggles four GPIO pins (32, 33, 25, 26) to drive
+% 	the L293D. No PWM is used.
+	
+% 	\textbf{main.cpp} implements the command dispatcher:
+% 	\textit{forward} and \textit{back} run until a \textit{stop} is
+% 	received. \textit{left} and \textit{right} run for 600\,ms then
+% 	auto-stop, giving approximately a 90\degree turn. The duration is
+% 	adjustable for different chassis.
+% 	All of these codes are available at 
+% \begin{lstlisting}[language=bash]
+% \url{https://github.com/gadepall/voice-ugv/tree/main/codes/esp32_side/src}
+% \end{lstlisting}
+
+	\section{Results and Discussion} \label{sec:results}
+	
+	
+	\subsection{Multi-Speaker Evaluation}
+	
+	Ten volunteers each recorded 10 templates per command through the
+	in-app training interface, then independently spoke each command
+	multiple times in a quiet indoor room. Across all speakers and all
+	five commands the system maintained \textbf{90--95\%} accuracy, as
+	broken down in Table~\ref{tab:results}.
+	
+	\input{tables/table_results.tex}
+	
+	DTW is fundamentally a speaker-dependent algorithm, so achieving this
+	accuracy across 10 different voices warrants explanation. Two
+	mechanisms are responsible. First, CMVN subtracts the per-coefficient mean and divides by the
+	standard deviation computed over the 92-frame window, stripping out
+	slow-varying spectral biases that differ between speakers. Second, the
+	Best-of-N rule picks the single closest
+	template out of up to 10 stored ones, so each user's personal
+	recordings effectively anchor the matcher to their own vocal
+	characteristics. 
+	
+	\subsection{Cross-Language Evaluation}
+	
+	A subset of participants issued commands in \textbf{Hindi, Gujarati,
+		and Tamil} rather than English. Accuracy stayed within the 90--95\%
+	band across all three languages. No changes to the pipeline were
+	needed: because \texttt{MFCCProcessor} works on raw acoustic energy
+	and \texttt{DTWMatcher} compares 26-dimensional frame vectors, the
+	system carries no phoneme tables, pronunciation dictionaries, or
+	language models that would tie it to a specific language. Any
+	consistently pronounced word maps to a repeatable MFCC trajectory and
+	can therefore serve as a command.
+	
+	\iffalse
+	\subsection{Latency}
+
+	Button press to motor response measured at roughly 1.6\,s. The
+	previous ESP32-resident pipeline took 2--4\,s because it had to
+	receive all 24{,}000 bytes of 8\,kHz PCM over BLE before extraction
+	could begin. Shifting MFCC and DTW to the phone reduces the BLE
+	transfer to a 7-byte ASCII string, and that single change accounts for
+	most of the latency improvement. Table~\ref{tab:comparison} summarises
+	the key system-level trade-offs between the two architectures.
+
+\begin{table}[H]
+\centering
+\caption{ESP32-Resident vs Phone-Resident Architecture}
+\label{tab:comparison}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Metric} & \textbf{ESP32-Resident} & \textbf{Phone-Resident} \\
+\midrule
+End-to-end latency        & 2--4\,s          & $\sim$1.6\,s \\
+BLE payload per command   & 24{,}000\,bytes  & 7\,bytes \\
+ESP32 flash used          & $\sim$80\,kB    & $<$1\,kB \\
+ESP32 RAM (DTW matrix)    & $O(F_1 F_2)$     & none \\
+Cloud / internet required & No               & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+\fi
+	
+	\subsection{Limitations}
+	
+	Each new speaker must record their own templates; there is currently
+	no speaker-independent enrolment path. In noisy settings the
+	\texttt{NoiseSuppressor} API offers some relief but does not fully
+	recover accuracy. On the ESP32 side, the 600\,ms fixed turn timer is
+	a heuristic --- it produces approximately 90\degree on the test chassis but
+	needs manual adjustment for any build with different motor speed or
+	chassis weight. Addressing all three points --- speaker independence,
+	noise robustness, and closed-loop turning --- is left to future work.
+	
+	\section{Conclusions} \label{sec:conclusions}
+	
+	Relocating MFCC extraction and DTW matching from the ESP32 to an
+	Android smartphone produces a fully on-device, cloud-free voice
+	control system for a UGV. 
+	%The shift cuts end-to-end latency from
+	%2--4\,s to 1.6\,s and recovers 80\,kB of microcontroller flash.
+	CMVN normalisation and the Best-of-$N$ template strategy together
+	yield 90--95\% accuracy across 10 speakers and four languages
+	— English, Hindi, Gujarati, and Tamil — despite DTW being
+	inherently speaker-dependent.
+	
+	Three limitations remain. Each new speaker must record personal
+	templates, accuracy drops in noisy environments even with
+	Android's \texttt{NoiseSuppressor} API active and Turn duration is not same for all UGV builds. Future work will
+	investigate compact convolutional or recurrent keyword-spotting
+	models that run on-device without per-user enrolment, alongside
+	data augmentation for noise robustness and a larger-scale
+	speaker evaluation.
+	
+	\nocite{*}
+	\bibliographystyle{IEEEtran}
+	\bibliography{references/main}
+	
+	% \appendix
+	% \section{Mathematical Derivations}
+	% \label{app:math}
+	
+	% This appendix collects all equations referenced in
+	% Sections~\ref{sec:mfcc} and~\ref{sec:dtw}.
+	
+	% \subsection*{B.1\quad MFCC Feature Extraction}
+	
+	% \textbf{Pre-emphasis:}
+	% \begin{equation}
+	% 	y[n] = x[n] - \alpha\, x[n-1], \quad \alpha = 0.97
+	% 	\label{eq:preemphasis}
+	% \end{equation}
+	
+	% \textbf{Hamming window:}
+	% \begin{equation}
+	% 	w[n] = 0.54 - 0.46\cos\!\left(\frac{2\pi n}{N-1}\right),
+	% 	\quad n = 0,\ldots,N-1
+	% 	\label{eq:hamming}
+	% \end{equation}
+	
+	% \textbf{Power spectrum:}
+	% \begin{equation}
+	% 	P[k] = \frac{|X[k]|^2}{N}, \quad k = 0,\ldots,\frac{N}{2}
+	% 	\label{eq:powspec}
+	% \end{equation}
+	
+	% \textbf{Mel scale:}
+	% \begin{equation}
+	% 	m = 2595\log_{10}\!\left(1 + \frac{f}{700}\right)
+	% 	\label{eq:meltohz}
+	% \end{equation}
+	
+	% \textbf{Mel filterbank log energy:}
+	% \begin{equation}
+	% 	E[m] = \log\!\left(\sum_{k} P[k]\,H_m[k]\right),
+	% 	\quad m = 0,\ldots,25
+	% 	\label{eq:melbank}
+	% \end{equation}
+	
+	% \textbf{DCT-II coefficients:}
+	% \begin{equation}
+	% 	c[k] = w_k \sum_{n=0}^{M-1} E[n]
+	% 	\cos\!\left(\frac{\pi k (2n+1)}{2M}\right),
+	% 	\quad k = 0,\ldots,12
+	% 	\label{eq:dct}
+	% \end{equation}
+	% \begin{equation}
+	% 	w_k = \begin{cases} \sqrt{1/M} & k=0 \\ \sqrt{2/M} & k>0 \end{cases}
+	% 	\label{eq:dctweight}
+	% \end{equation}
+	% where $M = 26$.
+	
+	% \textbf{Delta coefficients:}
+	% \begin{equation}
+	% 	\Delta c[f][k] = \frac{c[f{+}1][k] - c[f{-}1][k]}{2}
+	% 	\label{eq:delta}
+	% \end{equation}
+	
+	% \textbf{CMVN:}
+	% \begin{align}
+	% 	\mu_k     &= \frac{1}{F}\sum_{f=1}^{F} c[f][k] \label{eq:mean}\\
+	% 	\sigma_k  &= \sqrt{\frac{1}{F}\sum_{f=1}^{F}
+	% 		\bigl(c[f][k]-\mu_k\bigr)^2} \label{eq:std}\\
+	% 	\hat{c}[f][k] &= \frac{c[f][k] - \mu_k}{\sigma_k + \varepsilon}
+	% 	\label{eq:cmvn}
+	% \end{align}
+	% where $\varepsilon = 10^{-8}$.
+	
+	% \subsection*{B.2\quad Dynamic Time Warping}
+	
+	% \textbf{Local distance:}
+	% \begin{equation}
+	% 	d(i,j) = \left\|\mathbf{Q}[i] - \mathbf{T}[j]\right\|_2
+	% 	\label{eq:euclid}
+	% \end{equation}
+	
+	% \textbf{Accumulated cost recurrence:}
+	% \begin{equation}
+	% 	D[i][j] = d(i,j) + \min\bigl(D[i{-}1][j],\;
+	% 	D[i][j{-}1],\; D[i{-}1][j{-}1]\bigr)
+	% 	\label{eq:dtw}
+	% \end{equation}
+	
+	% \textbf{Path-length tracking:}
+	% \begin{equation}
+	% 	L[i][j] = 1 + L[\,p^*]
+	% 	\label{eq:pathlen}
+	% \end{equation}
+	% where $p^* = \arg\min\bigl(D[i{-}1][j],\; D[i][j{-}1],\; D[i{-}1][j{-}1]\bigr)$.
+	
+	% \textbf{Normalized DTW score:}
+	% \begin{equation}
+	% 	\text{score} = \frac{D[F_1{-}1][F_2{-}1]}{L[F_1{-}1][F_2{-}1]}
+	% 	\label{eq:dtwnorm}
+	% \end{equation}
+	
+	% \textbf{Best-of-N command score:}
+	% \begin{equation}
+	% 	s(\text{cmd}) = \min_{i=0}^{N-1} \text{score}(\mathbf{Q},\,\mathbf{T}_i)
+	% 	\label{eq:bestofn}
+	% \end{equation}
+	
+	% \textbf{Decision rule:}
+	% \begin{equation}
+	% 	\hat{c} = \underset{\text{cmd}}{\arg\min}\; s(\text{cmd}),
+	% 	\quad \text{if } \min_{\text{cmd}} s(\text{cmd}) < \tau
+	% 	\label{eq:decision}
+	% \end{equation}
+	%\appendix
+	\appendices
+	\section{Android Application} \label{app:android}
+	%\section{Software Installation}
+%	\label{app:install}
+	The git repo for all the codes is 
+\begin{lstlisting}[language=bash]
+https://github.com/gadepall/voice-ugv.git
+\end{lstlisting}
+	
+	\subsection{Install the pre-built APK}
+	\begin{enumerate}
+		\item Download \texttt{ugv\_android.apk} to the Android device.
+		\item On the device, enable \textit{Settings $\to$ Security $\to$
+			Install unknown apps} for your file manager.
+		\item Open the APK file and tap \textit{Install}.
+	\end{enumerate}
+	
+% 	\subsubsection*{Option B — Build from source with Android Studio}
+% 	\begin{enumerate}
+% 		\item \textbf{Install Android Studio} (Hedgehog or later) from
+% 		\url{https://developer.android.com/studio}.
+% 		During setup, install the Android SDK (API level 33+) and
+% 		the Android NDK if prompted.
+		
+% 		\item \textbf{Open the project.}
+% 		In Android Studio, choose \textit{File $\to$ Open} and select the
+% 		\texttt{ugv\_android/} folder. Wait for Gradle sync to complete.
+		
+% 		%   \item \textbf{Copy template assets.}
+% 		%     Paste the \texttt{.bin} files generated in Section~A.2 Step~3 into:
+% 		% \begin{lstlisting}
+% 			% ugv_android/app/src/main/assets/
+% 			% \end{lstlisting}
+		
+% 		\item \textbf{Build the APK.}
+% 		Select \textit{Build $\to$ Build Bundle(s) / APK(s) $\to$
+% 			Build APK(s)}. The signed debug APK is placed in:
+% 		\begin{lstlisting}[language=bash]
+%  app/build/outputs/apk/debug/app-debug.apk
+% 		\end{lstlisting}
+		
+% 		\item \textbf{Deploy to device.}
+% 		Connect an Android phone (USB debugging enabled), then click
+% 		\textit{Run $\to$ Run 'app'} or use:
+% 		\begin{lstlisting}[language=bash]
+% adb install app/build/outputs/apk/debug/app-debug.apk
+% 		\end{lstlisting}
+% 	\end{enumerate}
+	
+	\subsection{First-Time Setup on the Phone}
+	
+	\begin{enumerate}
+		\item Enable Bluetooth on the Android device.
+		\item Open the \textbf{UGV Controller} app.
+		The \textit{SetupActivity} wizard launches automatically on first
+		run, guiding you through BLE pairing.
+		\item Tap \textit{Connect to ESP32}. The app scans for a BLE device
+		named \texttt{ESP32\_UGV} and connects automatically.
+		\item Follow the on-screen prompts to record 5 templates per command
+		(10 recommended for best accuracy).
+		\item Tap any command button to issue voice commands. The recognized
+		command and DTW score are shown on the main screen; detailed
+		per-command scores are available in the \textit{Debug} screen.
+	\end{enumerate}
+	
+	\subsection{Troubleshooting}
+	
+	\begin{itemize}
+		\item \textbf{AudioRecord failed:} A 200\,ms delay is already applied
+		between recordings. If the error persists, close other apps
+		using the microphone.
+		\item \textbf{BLE not connecting:} Ensure the ESP32 is powered and
+		advertising (\texttt{ESP32\_UGV} appears in a BLE scanner app).
+		Force-stop the UGV app and reconnect.
+		\item \textbf{Poor recognition accuracy:} Record additional templates
+		in a quiet environment. Reduce the threshold $\tau$ in
+		\texttt{DTWMatcher.java} if valid commands are being rejected.
+		% \item \textbf{Gradle build errors:} Ensure JDK 17 is selected in
+		% \textit{File $\to$ Project Structure $\to$ SDK Location}.
+	\end{itemize}
+
+
+
+	\subsection{Android Application Working}
+	The app captures 1.5\,s of audio at 8\,kHz mono (16-bit PCM, 24\,kB per
+	utterance) using the \texttt{AudioRecord} API. The 8\,kHz sample rate was
+chosen deliberately: speech energy is concentrated below 4\,kHz, so the
+Nyquist criterion is satisfied while halving the data volume compared to
+16\,kHz, directly reducing FFT computation and template storage. All
+signal processing runs on a background thread to keep the UI responsive;
+results are posted back to the UI thread on completion. A 200\,ms pause
+before each \texttt{AudioRecord} initialisation prevents microphone
+release errors on back-to-back recordings.
+
+When a match is confirmed (score $< \tau$), a 7-byte ASCII command string
+is written to the BLE GATT characteristic (\texttt{UUID:~...9002}),
+reducing the wireless payload by over 99\% compared to streaming raw PCM.
+The ESP32 acknowledges receipt via a NOTIFY characteristic
+(\texttt{UUID:~...9003}), completing the control loop.
+
+The app provides three screens. The \textit{Main} screen presents five
+command buttons with live recognition feedback after each utterance.
+The \textit{Debug} screen (Fig.~\ref{fig:debug}) displays per-command
+DTW scores as a live bar chart, enabling the user to tune $\tau$ by
+observing the separation between correct and incorrect command scores.
+The \textit{Training} screen lets users record up to 10 templates per
+command, showing per-command slot counters (e.g.\ 7/10) to track
+enrolment progress.
+	
+	% \subsection{Template Conversion Script}
+	% \texttt{convert\_templates.py} is a one-time script that reads the
+	% C header \texttt{templates.h}, strips the \texttt{f} suffix from
+	% float literals, and writes one \texttt{.bin} file per command for
+	% \texttt{TemplateStore} using \texttt{struct.pack}.
+	
+	%\subsection{Out-of-the-Box Deployment}
+	Flashing the firmware and installing the APK is all that is required.
+	The app scans for a BLE device named \texttt{ESP32\_UGV} and connects
+	automatically. Once paired, the user speaks a command and the vehicle
+	responds within approximately 1.6\,s.
+	
+	\iffalse
+	This appendix provides step-by-step instructions for setting up the
+	complete development environment, flashing the ESP32 firmware, and
+	building and installing the Android application.
+	
+	\subsection*{A.1\quad Prerequisites}
+	
+	The following tools must be installed on the host PC before proceeding:
+	
+	\begin{itemize}
+		% \item \textbf{Python 3.8+} — required for template conversion and
+		% PlatformIO's build system. Available at \url{https://www.python.org}.
+		\item \textbf{Git} — for cloning the repository.
+		Available at 
+		\item \textbf{VS Code} or any editor with PlatformIO support.
+	\end{itemize}
+\fi
+	
+\section{ESP32 Firmware} \label{app:esp32}
+%{Software Implementation} \label{sec:software}
+\subsection{Installation} 
+	
+	\begin{enumerate}
+		\item \textbf{Install PlatformIO.}
+		Install the PlatformIO IDE extension in VS Code, or install the
+		PlatformIO Core CLI via:
+\begin{lstlisting}[language=bash]
+    pip install platformio
+\end{lstlisting}
+		
+		\item \textbf{Clone / extract the project.}
+		Place the \texttt{ugv\_esp32/} folder on your PC.
+		
+		%   \item \textbf{Generate MFCC template binaries.}
+		%     Run the conversion script once to produce the \texttt{.bin} files
+		%     consumed by the Android app:
+		% \begin{lstlisting}[language=bash]
+			% cd ugv_esp32
+			% python convert_templates.py
+			% \end{lstlisting}
+		%     This reads \texttt{templates.h} and writes one binary file per
+		%     command into the \texttt{assets/} folder.
+		
+		\item \textbf{Connect the ESP32} to the PC via USB.
+		
+		\item \textbf{Build and flash} the firmware:
+		\begin{lstlisting}[language=bash]
+    pio run --target upload
+		\end{lstlisting}
+		PlatformIO automatically installs the \texttt{ESP32 BLE Arduino}
+		library declared in \texttt{platformio.ini}.
+		After flashing, the ESP32 advertises itself as \texttt{ESP32\_UGV}
+		over BLE and awaits a connection.
+		
+		\item \textbf{Verify} by opening the serial monitor
+		(\texttt{pio device monitor}, 115200\,baud) and confirming the
+		message \texttt{BLE started, advertising...}.
+	\end{enumerate}
+
+	\subsection{ESP Firmware Implementation Detail}
+	\label{app:esp_imple_detail}
+	Three source files make up the firmware, built with PlatformIO
+	on the Arduino framework.
+	
+	\textbf{ble\_receive.cpp} sets up a BLE GATT server with a WRITE
+	characteristic (\texttt{UUID:~...9002}) for incoming command strings
+	and a NOTIFY characteristic (\texttt{UUID:~...9003}) for
+	acknowledgements. Any string not matching the five known commands
+	is discarded. Advertising for new connection restarts automatically on disconnect.
+	
+	\textbf{motor.cpp} toggles four GPIO pins (32, 33, 25, 26) to drive
+	the L293D. No PWM is used.
+	
+	\textbf{main.cpp} implements the command dispatcher:
+	\textit{forward} and \textit{back} run until a \textit{stop} is
+	received. \textit{left} and \textit{right} run for 600\,ms then
+	auto-stop, giving approximately a 90\degree turn. The duration is
+	adjustable for different chassis.
+
+	
+	Lateral movement is timed rather than angle-sensed: \texttt{main.cpp}
+	holds the turn GPIO pattern for 600\,ms before issuing a stop, which
+	yields roughly 90\degree on the development chassis at full motor voltage.
+	Heavier or slower builds need a longer delay; faster or lighter ones
+	need a shorter one. The constant is a single integer literal in
+	\texttt{main.cpp} and requires no recompilation of any Android code.
+	
+	
+\end{document}
