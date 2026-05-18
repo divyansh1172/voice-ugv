@@ -1,0 +1,82 @@
+# --- General ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+desktop.ini
+Thumbs.db
+
+# --- IDEs ---
+.idea/
+.vscode/
+*.iml
+*.iws
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+.factorypath
+
+# --- Android ---
+**/.gradle/
+**/build/
+**/local.properties
+**/captures/
+**/.externalNativeBuild/
+**/.cxx/
+*.keystore
+*.jks
+!debug.keystore
+google-services.json
+
+# --- ESP32 / PlatformIO ---
+**/.pio/
+esp32_firmware/*.db
+esp32_firmware/*.ipch
+
+# --- LaTeX ---
+docs/paper/*.aux
+docs/paper/*.bbl
+docs/paper/*.blg
+docs/paper/*.fdb_latexmk
+docs/paper/*.fls
+docs/paper/*.glg
+docs/paper/*.glo
+docs/paper/*.gls
+docs/paper/*.idx
+docs/paper/*.ilg
+docs/paper/*.ind
+docs/paper/*.ist
+docs/paper/*.log
+docs/paper/*.nav
+docs/paper/*.out
+docs/paper/*.snm
+docs/paper/*.synctex.gz
+docs/paper/*.toc
+docs/paper/*.vrb
+docs/paper/*.run.xml
+docs/paper/*.bcf
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+
+# --- Binaries & Build Artifacts ---
+# Ignore all binaries globally
+*.apk
+*.bin
+*.elf
+*.map
+
+# BUT explicitly keep the releases folder and its contents
+!releases/
+!releases/**
