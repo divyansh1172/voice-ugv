@@ -25,7 +25,7 @@ import java.util.concurrent.Future;
 public class DTWMatcher {
 
     public static final float THRESHOLD = 12.0f;
-    private static final int   WINDOW    = 20; // Sakoe-Chiba window size
+    private static final int   WINDOW    = 35; // Increased window for better alignment flexibility
 
     // Thread pool for parallel matching
     private final ExecutorService executor = Executors.newFixedThreadPool(
@@ -33,10 +33,10 @@ public class DTWMatcher {
 
     // Reusable buffers to avoid GC pressure (ThreadLocal for thread-safety)
     private static class Buffers {
-        float[] prev     = new float[MFCCProcessor.MAX_FRAMES];
-        float[] curr     = new float[MFCCProcessor.MAX_FRAMES];
-        float[] prevPath = new float[MFCCProcessor.MAX_FRAMES];
-        float[] currPath = new float[MFCCProcessor.MAX_FRAMES];
+        float[] prev     = new float[MFCCProcessor.MAX_FRAMES + 10];
+        float[] curr     = new float[MFCCProcessor.MAX_FRAMES + 10];
+        float[] prevPath = new float[MFCCProcessor.MAX_FRAMES + 10];
+        float[] currPath = new float[MFCCProcessor.MAX_FRAMES + 10];
     }
     private final ThreadLocal<Buffers> localBuffers = ThreadLocal.withInitial(Buffers::new);
 
@@ -74,6 +74,8 @@ public class DTWMatcher {
             float d = a[i] - b[i];
             sum += d * d;
         }
+        // Square root is expensive, but Euclidean is standard. 
+        // For DTW, sometimes squared Euclidean is used to save time, but scores change.
         return (float) Math.sqrt(sum);
     }
 
@@ -84,6 +86,8 @@ public class DTWMatcher {
     private float dtwDistance(float[][] seq1, float[][] seq2, float limit) {
         int len1 = seq1.length;
         int len2 = seq2.length;
+        
+        // Relaxed length check
         if (Math.abs(len1 - len2) > WINDOW) return Float.MAX_VALUE;
 
         Buffers b = localBuffers.get();
@@ -132,9 +136,9 @@ public class DTWMatcher {
                 if (curr[j] < rowMin) rowMin = curr[j];
             }
 
-            // Early exit: if the best possible score in this row (unnormalized)
-            // is already worse than our limit * average path length.
-            if (rowMin / (i + 1) > limit) return Float.MAX_VALUE;
+            // Early exit: if the best possible score in this row (normalized)
+            // is already significantly worse than our limit.
+            if (rowMin / (i + 1) > limit * 1.5f) return Float.MAX_VALUE;
 
             // Swap rows
             float[] tmp; 

@@ -10,7 +10,7 @@ void setup() {
     Serial.begin(115200);
     motor_init();
     ble_init();
-    Serial.println("ESP32 UGV ready — waiting for command strings via BLE");
+    Serial.println("ESP32 UGV ready — waiting for command codes (f/b/l/r/s) via BLE");
 }
 
 void loop() {
@@ -20,14 +20,16 @@ void loop() {
         return;
     }
 
-    Serial.printf("Command: %s\n", cmd);
+    Serial.printf("Command received: %s\n", cmd);
 
-    if      (strcmp(cmd, "forward") == 0) { motor_forward();}
-    else if (strcmp(cmd, "back")    == 0) { motor_back();   }
-    else if (strcmp(cmd, "left")    == 0) { motor_left();    delay(600); motor_stop(); }
-    else if (strcmp(cmd, "right")   == 0) { motor_right();   delay(600); motor_stop(); }
-    else if (strcmp(cmd, "stop")    == 0) { motor_stop(); }
-    else { Serial.printf("Unknown command: %s\n", cmd); }
+    // Optimized single-character dispatch
+    char code = cmd[0];
+    if      (code == 'f' || strcmp(cmd, "forward") == 0) { motor_forward(); }
+    else if (code == 'b' || strcmp(cmd, "back")    == 0) { motor_back();    }
+    else if (code == 'l' || strcmp(cmd, "left")    == 0) { motor_left();    delay(600); motor_stop(); }
+    else if (code == 'r' || strcmp(cmd, "right")   == 0) { motor_right();   delay(600); motor_stop(); }
+    else if (code == 's' || strcmp(cmd, "stop")    == 0) { motor_stop();    }
+    else { Serial.printf("Unknown command code: %s\n", cmd); }
 
     Serial.println("Ready for next command");
 }

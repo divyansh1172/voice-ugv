@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Adaptive Icon Safe Zone is roughly 72dp in the center of 108dp -->
+    <!-- Wheel (Chassis) - Outer Ring -->
+    <path
+        android:strokeColor="#2C3E50"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M54,22 A32,32 0 1 1 53.99,22" />
+        
+    <!-- Soundwaves (Simplified for VectorDrawable) -->
+    <path
+        android:fillColor="#2980B9"
+        android:pathData="M38,45h3v18h-3z" />
+    <path
+        android:fillColor="#2980B9"
+        android:pathData="M46,38h3v32h-3z" />
+    <path
+        android:fillColor="#2980B9"
+        android:pathData="M52.5,34h3v40h-3z" />
+    <path
+        android:fillColor="#2980B9"
+        android:pathData="M59,38h3v32h-3z" />
+    <path
+        android:fillColor="#2980B9"
+        android:pathData="M67,45h3v18h-3z" />
+
+</vector>

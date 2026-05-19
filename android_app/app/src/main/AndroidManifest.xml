@@ -23,6 +23,8 @@
     <application
         android:allowBackup="true"
         android:label="UGV Voice"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
 
         <activity android:name=".MainActivity"

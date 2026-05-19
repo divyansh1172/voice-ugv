@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="102" fill="#F0F3F4"/>
+  
+  <!-- Outer Wheel (Chassis) -->
+  <circle cx="256" cy="256" r="180" stroke="#2C3E50" stroke-width="20" stroke-dasharray="80 20"/>
+  <circle cx="256" cy="256" r="140" stroke="#2C3E50" stroke-width="12" opacity="0.3"/>
+  
+  <!-- Voice Waveform -->
+  <rect x="180" y="216" width="16" height="80" rx="8" fill="#2980B9">
+    <animate attributeName="height" values="80;40;80" dur="2s" repeatCount="indefinite" />
+    <animate attributeName="y" values="216;236;216" dur="2s" repeatCount="indefinite" />
+  </rect>
+  <rect x="216" y="176" width="16" height="160" rx="8" fill="#2980B9">
+    <animate attributeName="height" values="160;100;160" dur="1.5s" repeatCount="indefinite" />
+    <animate attributeName="y" values="176;206;176" dur="1.5s" repeatCount="indefinite" />
+  </rect>
+  <rect x="252" y="156" width="16" height="200" rx="8" fill="#2980B9">
+    <animate attributeName="height" values="200;120;200" dur="1.8s" repeatCount="indefinite" />
+    <animate attributeName="y" values="156;196;156" dur="1.8s" repeatCount="indefinite" />
+  </rect>
+  <rect x="288" y="176" width="16" height="160" rx="8" fill="#2980B9">
+    <animate attributeName="height" values="160;100;160" dur="1.5s" repeatCount="indefinite" />
+    <animate attributeName="y" values="176;206;176" dur="1.5s" repeatCount="indefinite" />
+  </rect>
+  <rect x="324" y="216" width="16" height="80" rx="8" fill="#2980B9">
+    <animate attributeName="height" values="80;40;80" dur="2s" repeatCount="indefinite" />
+    <animate attributeName="y" values="216;236;216" dur="2s" repeatCount="indefinite" />
+  </rect>
+</svg>

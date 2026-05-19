@@ -69,24 +69,41 @@ public class MFCCProcessor {
      * Extract MFCC features from raw 16-bit PCM audio.
      */
     public synchronized float[][] extract(short[] audio) {
-        // ── Voice Activity Detection (VAD) ───────────────────────────────────
+        // ── Enhanced Voice Activity Detection (VAD) ──────────────────────────
+        // Calculate average energy and zero-crossing rate for thresholding
+        float avgEnergy = 0;
+        for (short s : audio) {
+            float v = s / 32768.0f;
+            avgEnergy += v * v;
+        }
+        avgEnergy /= audio.length;
+        
+        // Dynamic threshold: at least 0.0005, or 2x the background average
+        float energyThresh = Math.max(0.0005f, avgEnergy * 2.0f); 
+
         int startSample = 0;
         int endSample   = audio.length;
-        float energyThresh = 0.0005f; 
 
-        for (int i = 0; i < audio.length; i += HOP_SIZE) {
+        // Find speech start
+        for (int i = 0; i < audio.length - FRAME_SIZE; i += HOP_SIZE) {
             float energy = 0;
-            int limit = Math.min(i + FRAME_SIZE, audio.length);
-            for (int k = i; k < limit; k++) {
+            int zcr = 0;
+            float prevV = 0;
+            for (int k = i; k < i + FRAME_SIZE; k++) {
                 float v = audio[k] / 32768.0f;
                 energy += v * v;
+                if (v * prevV < 0) zcr++;
+                prevV = v;
             }
             energy /= FRAME_SIZE;
-            if (energy > energyThresh) {
-                startSample = Math.max(0, i - FRAME_SIZE);
+            // Speech typically has higher energy or higher ZCR for fricatives
+            if (energy > energyThresh || (energy > energyThresh * 0.5f && zcr > 30)) {
+                startSample = Math.max(0, i - (2 * FRAME_SIZE)); // Keep a small buffer
                 break;
             }
         }
+        
+        // Find speech end
         for (int i = audio.length - FRAME_SIZE; i > startSample; i -= HOP_SIZE) {
             float energy = 0;
             for (int k = i; k < i + FRAME_SIZE; k++) {
@@ -94,8 +111,8 @@ public class MFCCProcessor {
                 energy += v * v;
             }
             energy /= FRAME_SIZE;
-            if (energy > energyThresh) {
-                endSample = Math.min(audio.length, i + FRAME_SIZE);
+            if (energy > energyThresh * 0.5f) {
+                endSample = Math.min(audio.length, i + (2 * FRAME_SIZE));
                 break;
             }
         }

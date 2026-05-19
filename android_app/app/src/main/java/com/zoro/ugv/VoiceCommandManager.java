@@ -8,6 +8,9 @@ import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.media.audiofx.AcousticEchoCanceler;
+import android.media.audiofx.AutomaticGainControl;
+import android.media.audiofx.NoiseSuppressor;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -199,6 +202,21 @@ public class VoiceCommandManager {
             return null;
         }
 
+        // Enable hardware-level noise suppression and AGC if available
+        int sessionId = audioRecord.getAudioSessionId();
+        if (NoiseSuppressor.isAvailable()) {
+            NoiseSuppressor ns = NoiseSuppressor.create(sessionId);
+            if (ns != null) ns.setEnabled(true);
+        }
+        if (AutomaticGainControl.isAvailable()) {
+            AutomaticGainControl agc = AutomaticGainControl.create(sessionId);
+            if (agc != null) agc.setEnabled(true);
+        }
+        if (AcousticEchoCanceler.isAvailable()) {
+            AcousticEchoCanceler aec = AcousticEchoCanceler.create(sessionId);
+            if (aec != null) aec.setEnabled(true);
+        }
+
         short[] audio = new short[numSamples];
         audioRecord.startRecording();
         int read = 0;
@@ -220,10 +238,22 @@ public class VoiceCommandManager {
             Log.w(TAG, "BLE not ready — command not sent: " + command);
             return;
         }
-        ctrlChar.setValue(command.getBytes());
+        
+        // Map long strings to single-character codes for lower latency
+        String code;
+        switch (command.toLowerCase()) {
+            case "forward": code = "f"; break;
+            case "back":    code = "b"; break;
+            case "left":    code = "l"; break;
+            case "right":   code = "r"; break;
+            case "stop":    code = "s"; break;
+            default:        code = command; // fallback
+        }
+        
+        ctrlChar.setValue(code.getBytes());
         ctrlChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
         boolean ok = gatt.writeCharacteristic(ctrlChar);
-        Log.d(TAG, "BLE write '" + command + "' → " + (ok ? "ok" : "failed"));
+        Log.d(TAG, "BLE write '" + code + "' (for " + command + ") → " + (ok ? "ok" : "failed"));
     }
 
     private void resolveCtrlChar() {

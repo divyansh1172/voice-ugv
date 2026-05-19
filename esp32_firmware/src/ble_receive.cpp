@@ -44,12 +44,21 @@ class CtrlCallbacks : public BLECharacteristicCallbacks {
         std::string val = c->getValue();
         if (val.empty()) return;
 
-        // Accept only known command strings — ignore anything else
+        char c0 = val[0];
+        // Handle single-character codes for lower latency
+        if (c0 == 'f' || c0 == 'b' || c0 == 'l' || c0 == 'r' || c0 == 's') {
+            commandBuf[0] = c0;
+            commandBuf[1] = '\0';
+            commandReady = true;
+            return;
+        }
+
+        // Fallback for legacy string-based commands
         const char* known[] = {"forward","back","left","right","stop"};
         for (const char* k : known) {
             if (val == k) {
-                strncpy(commandBuf, val.c_str(), sizeof(commandBuf) - 1);
-                commandBuf[sizeof(commandBuf) - 1] = '\0';
+                commandBuf[0] = k[0]; // convert to code
+                commandBuf[1] = '\0';
                 commandReady = true;
                 return;
             }
