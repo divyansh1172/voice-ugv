@@ -23,9 +23,8 @@ import java.util.Map;
  *
  * Manages up to MAX_TEMPLATES per command.
  *
- * Sources (loaded in order):
- *   1. assets/templates/{cmd}_0.bin  — original template from templates.h
- *   2. files/templates/{cmd}_1.bin … {cmd}_9.bin — recorded in-app
+ * Sources:
+ *   Internal storage: files/templates/{cmd}_0.bin … {cmd}_9.bin — recorded in-app
  *
  * Binary format per file:
  *   int32   numFrames  (little-endian)
@@ -81,22 +80,20 @@ public class TemplateStore {
     }
 
     /**
-     * Delete all recorded (index ≥ 1) templates for a command,
-     * keeping the original asset template.
+     * Delete all templates for a command.
      */
     public void clearRecorded(String command) {
         List<float[][]> list = templates.get(command);
         if (list == null) return;
 
-        // keep only index 0 (asset template)
-        while (list.size() > 1) list.remove(list.size() - 1);
+        list.clear();
 
         // delete files
         File dir = getInternalDir();
-        for (int i = 1; i < MAX_TEMPLATES; i++) {
+        for (int i = 0; i < MAX_TEMPLATES; i++) {
             new File(dir, command + "_" + i + ".bin").delete();
         }
-        Log.d(TAG, "Cleared recorded templates for " + command);
+        Log.d(TAG, "Cleared templates for " + command);
     }
 
     /** Delete ALL recorded templates for ALL commands. */
@@ -110,18 +107,9 @@ public class TemplateStore {
         for (String cmd : COMMANDS) {
             List<float[][]> list = templates.get(cmd);
 
-            // 1. Asset template (index 0)
-            float[][] asset = loadFromAssets(cmd, 0);
-            if (asset != null) {
-                list.add(asset);
-                Log.d(TAG, "Loaded asset " + cmd + "_0  (" + asset.length + " frames)");
-            } else {
-                Log.w(TAG, "No asset template for " + cmd);
-            }
-
-            // 2. Recorded templates (index 1..9)
+            // Load templates from disk (index 0..9)
             File dir = getInternalDir();
-            for (int i = 1; i < MAX_TEMPLATES; i++) {
+            for (int i = 0; i < MAX_TEMPLATES; i++) {
                 File f = new File(dir, cmd + "_" + i + ".bin");
                 if (!f.exists()) continue;
                 float[][] tmpl = loadFromFile(f);
@@ -135,16 +123,6 @@ public class TemplateStore {
     }
 
     // ── Serialisation ─────────────────────────────────────────────────────────
-
-    private float[][] loadFromAssets(String command, int index) {
-        String path = "templates/" + command + "_" + index + ".bin";
-        try (InputStream is = context.getAssets().open(path)) {
-            return readBin(is);
-        } catch (IOException e) {
-            Log.w(TAG, "Asset not found: " + path);
-            return null;
-        }
-    }
 
     private float[][] loadFromFile(File file) {
         try (FileInputStream fis = new FileInputStream(file)) {
