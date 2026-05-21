@@ -8,6 +8,18 @@ A sophisticated, **100% offline**, voice-controlled robotics platform that combi
 
 ---
 
+## 📋 Table of Contents
+- [🚀 Key Features](#-key-features)
+- [📱 App Interface](#-app-interface)
+- [🛠️ System Architecture](#-system-architecture)
+- [🔌 Hardware Setup](#-hardware-setup)
+- [⚙️ Installation & Setup](#-installation--setup)
+- [🚦 Usage](#-usage)
+- [📜 Development Notes](#-development-notes)
+- [📜 License](#-license)
+
+---
+
 ## 🚀 Key Features
 
 *   **Offline Voice Recognition**: No cloud dependency or internet connection required. All processing happens locally for zero latency and total privacy.
@@ -30,9 +42,40 @@ A sophisticated, **100% offline**, voice-controlled robotics platform that combi
 
 ---
 
+## 📱 App Interface
+
+<p align="center">
+  <img src="docs/paper/figs/main_ui.jpeg" width="350" alt="Main Controller Interface">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/paper/figs/debug.jpeg" width="350" alt="Debug Signal Analysis">
+  <br>
+  <i>Left: The primary control interface with Emergency STOP. Right: The debug screen for signal analysis and template training.</i>
+</p>
+
+---
+
 ## 🛠️ System Architecture
 
 The project is split into two specialized nodes:
+
+### Data Flow Pipeline
+```mermaid
+graph TD
+    subgraph "Android 'Brain' (Smartphone)"
+        A[Audio Capture 8kHz] --> B[MFCC Extraction]
+        B --> C[DTW Pattern Matching]
+        C --> D[Threshold Validation]
+        D --> E[BLE Command Transmit]
+    end
+
+    E -- "BLE (Single-Byte)" --> F
+
+    subgraph "ESP32 'Driver' (Robot)"
+        F[ESP32 BLE Receiver] --> G[Command Dispatcher]
+        G --> H[L293D Motor Driver]
+        H --> I[DC Gear Motors]
+    end
+```
 
 ### 1. Android "Brain" App (`android_app`)
 *   **Role**: Handles audio capture (8kHz mono), signal processing, and decision-making.
@@ -48,6 +91,45 @@ The project is split into two specialized nodes:
 
 ## 🔌 Hardware Setup
 
+### Wiring Schematic
+The following diagram illustrates the connections between the ESP32, the L293D motor driver, and the DC motors.
+
+```mermaid
+graph LR
+    subgraph ESP32
+        p1[GPIO 32]
+        p2[GPIO 33]
+        p3[GPIO 25]
+        p4[GPIO 26]
+        p5[3.3V]
+        p6[GND]
+    end
+
+    subgraph L293D
+        l1[IN1]
+        l2[IN2]
+        l3[IN3]
+        l4[IN4]
+        l5[EN1 & EN2]
+        l6[GND]
+    end
+
+    subgraph Motors
+        ma[Motor A]
+        mb[Motor B]
+    end
+
+    p1 --> l1
+    p2 --> l2
+    p3 --> l3
+    p4 --> l4
+    p5 --> l5
+    p6 --> l6
+
+    l1 & l2 --> ma
+    l3 & l4 --> mb
+```
+
 ### Components List
 | Component | Purpose |
 | :--- | :--- |
@@ -56,12 +138,6 @@ The project is split into two specialized nodes:
 | **UGV Chassis** | 2WD or 4WD Differential Drive |
 | **Li-ion Battery** | 7.4V - 12V Power Supply |
 | **Android Smartphone** | Primary Controller & DSP Node |
-
-### Wiring Schematic
-The ESP32 communicates with the L293D to control direction and speed:
-*   **Motor A (Left)**: GPIO 32 (IN1), GPIO 33 (IN2)
-*   **Motor B (Right)**: GPIO 25 (IN3), GPIO 26 (IN4)
-*   **Power**: VCC2 (L293D) to External Battery; VCC1 to ESP32 3.3V.
 
 ---
 
@@ -93,4 +169,9 @@ This project demonstrates high-performance edge computing. Recent optimizations 
 
 ---
 
-*Developed by Divyansh Maheshwari, Shriyansh Chawda and GVV Sharma*
+## 📜 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+*Developed by Divyansh Maheshwari and Shriyansh Chawda*
