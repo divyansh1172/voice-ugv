@@ -12,13 +12,17 @@ A sophisticated, **100% offline**, voice-controlled robotics platform that combi
 
 *   **Offline Voice Recognition**: No cloud dependency or internet connection required. All processing happens locally for zero latency and total privacy.
 *   **Enhanced DSP Pipeline**:
-    *   **Dynamic VAD (Voice Activity Detection)**: Uses relative energy and zero-crossing rates to surgically isolate speech from background noise.
+    *   **Dynamic VAD (Voice Activity Detection)**: Uses a hybrid Energy + Zero-Crossing Rate (ZCR) threshold to surgically isolate speech, ensuring reliable detection of high-frequency phonemes (e.g., the "s" in "stop").
     *   **MFCC Extraction**: Extracts Mel-frequency cepstral coefficients for robust vocal feature representation.
+    *   **CMVN Normalization**: Implements Cepstral Mean and Variance Normalization to ensure recognition robustness across different hardware and volume levels.
     *   **Delta-Delta Coefficients**: Captures vocal acceleration features to distinguish between similar-sounding commands (e.g., "Left" vs "Right").
 *   **Optimized Pattern Matching**:
     *   **Dynamic DTW**: Uses Dynamic Time Warping with a flexible Sakoe-Chiba band to accommodate variations in speaking speed.
+    *   **Parallelized Computation**: Leverages multi-core Android CPUs via `ExecutorService` to perform matching across all templates in parallel, achieving ~20ms latency.
     *   **Best-of-N Strategy**: Supports up to 10 personalized voice templates per command for user adaptation.
-*   **Low-Latency BLE Protocol**: Uses a single-byte command architecture ('f', 'b', 'l', 'r', 's') to minimize transmission overhead and parsing jitter.
+*   **Low-Latency BLE Protocol**:
+    *   **Optimized Capture**: Uses a fixed 1.5-second (12,000 samples) window for rapid command response.
+    *   **Single-Byte Architecture**: Uses character codes ('f', 'b', 'l', 'r', 's') to minimize transmission overhead and parsing jitter.
 *   **Professional Controller UI**: 
     *   Modern, high-contrast interface with real-time status feedback.
     *   Joystick-style manual overrides and Emergency STOP safety button.

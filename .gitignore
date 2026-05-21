@@ -1,4 +1,5 @@
 # --- General ---
+GEMINI.md
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -8,6 +9,9 @@ Icon
 .Trashes
 desktop.ini
 Thumbs.db
+*.bak
+*.tmp
+*.log
 
 # --- IDEs ---
 .idea/
@@ -20,10 +24,14 @@ Thumbs.db
 .classpath
 .settings/
 .factorypath
+.history/
+*.sublime-project
+*.sublime-workspace
 
 # --- Android ---
 **/.gradle/
 **/build/
+**/release/
 **/local.properties
 **/captures/
 **/.externalNativeBuild/
@@ -60,6 +68,8 @@ docs/paper/*.toc
 docs/paper/*.vrb
 docs/paper/*.run.xml
 docs/paper/*.bcf
+docs/paper/*.pdf
+!docs/paper/main.pdf
 
 # --- Python ---
 __pycache__/
@@ -71,12 +81,16 @@ ENV/
 .env
 
 # --- Binaries & Build Artifacts ---
-# Ignore all binaries globally
 *.apk
 *.bin
 *.elf
 *.map
-
-# BUT explicitly keep the releases folder and its contents
-!releases/
-!releases/**
+*.hex
+*.exe
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
