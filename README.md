@@ -9,6 +9,7 @@ A sophisticated, **100% offline**, voice-controlled robotics platform that combi
 ---
 
 ## 📋 Table of Contents
+- [📦 Download](#-download)
 - [🚀 Key Features](#-key-features)
 - [📱 App Interface](#-app-interface)
 - [🛠️ System Architecture](#-system-architecture)
@@ -17,6 +18,13 @@ A sophisticated, **100% offline**, voice-controlled robotics platform that combi
 - [🚦 Usage](#-usage)
 - [📜 Development Notes](#-development-notes)
 - [📜 License](#-license)
+
+---
+
+## 📦 Download
+
+> [!TIP]
+> **Ready to roll?** Download the latest pre-built APK from the [Releases](https://github.com/divyansh1172/voice-ugv/releases) page to get started immediately without setting up Android Studio.
 
 ---
 
